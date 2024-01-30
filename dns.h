@@ -18,6 +18,7 @@
 #define DNS_T_AAAA "\0\34"
 #define DNS_T_SRV "\0\41"
 #define DNS_T_DNAME "\0\47"
+#define DNS_T_IXFR "\0\373"
 #define DNS_T_AXFR "\0\374"
 #define DNS_T_ANY "\0\377"
 

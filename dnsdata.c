@@ -474,20 +474,22 @@ static int doline(void) {
 
       if (!memcmp(bytes, "\0\0", 2))
         return fail("Type 0 is prohibited");
-      if (!memcmp(bytes, DNS_T_AXFR, 2))
-        return fail("Type AXFR is prohibited");
-      if (!memcmp(bytes, DNS_T_SOA, 2))
-        return fail("Type SOA is prohibited");
       if (!memcmp(bytes, DNS_T_NS, 2))
         return fail("Type NS is prohibited");
       if (!memcmp(bytes, DNS_T_CNAME, 2))
         return fail("Type CNAME is prohibited");
+      if (!memcmp(bytes, DNS_T_SOA, 2))
+        return fail("Type SOA is prohibited");
       if (!memcmp(bytes, DNS_T_PTR, 2))
         return fail("Type PTR is prohibited");
       if (!memcmp(bytes, DNS_T_MX, 2))
         return fail("Type MX is prohibited");
       if (!memcmp(bytes, DNS_T_DNAME, 2))
         return fail("Type DNAME is prohibited");
+      if (!memcmp(bytes, DNS_T_IXFR, 2))
+        return fail("Type IXFR is prohibited");
+      if (!memcmp(bytes, DNS_T_AXFR, 2))
+        return fail("Type AXFR is prohibited");
 
       rr_start(bytes, ttl, ttd, loc);
       rr_add(f[2].s, f[2].len);

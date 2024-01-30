@@ -151,7 +151,7 @@ static int respond(stralloc *qname, const char qtype[2]) {
   int found, gavesoa, rc;
   char *control, *wild;
 
-  if (!memcmp(qtype, DNS_T_AXFR, 2)) {
+  if (!memcmp(qtype, DNS_T_AXFR, 2) || !memcmp(qtype, DNS_T_IXFR, 2)) {
     response_rcode(RCODE_NOTIMPL);
     return 1;
   }
