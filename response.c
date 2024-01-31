@@ -76,35 +76,35 @@ int response_query(stralloc *r, stralloc *qname, char qtype[2],
     char qclass[2]) {
   size_t pos = 12;
 
-  if (r->len < 12)
-    return 0; /* truncated header */
-  if (r->s[2] & 254)
-    return 0; /* not a standard query */
-  if (memcmp(r->s + 4, "\0\1", 2))
-    return 0; /* QDCOUNT != 1 */
-
-  if (!dns_packet_getname(&pos, qname, r->s, r->len))
-    return 0;
-  if (!dns_packet_copy(&pos, qtype, 2, r->s, r->len))
-    return 0;
-  if (!dns_packet_copy(&pos, qclass, 2, r->s, r->len))
-    return 0;
-
   response = r;
   namec = rdata = 0;
 
-  response->len = 6; /* inherit ID, RD and QCOUNT */
-  response->s[2] |= 128; /* QR = 1 */
-  response->s[3] = 0; /* RA = 0, RCODE = NOERROR */
+  if (r->len < 12 || r->s[2] & 128) {
+    r->len = 0;
+    return 0; /* truncated header or QR set */
+  }
 
-  if (!response_addbytes("\0\0\0\0\0\0", 6))
-    return 0;
+  if (r->s[2] & 254) /* not a standard query */
+    return response_rcode(RCODE_NOTIMPL), 0;
+
+  if (memcmp(r->s + 4, "\0\1", 2)) /* QDCOUNT != 1 */
+    return response_rcode(RCODE_FORMERR), 0;
+  if (!dns_packet_getname(&pos, qname, r->s, r->len))
+    return response_rcode(RCODE_FORMERR), 0;
+  if (!dns_packet_copy(&pos, qtype, 2, r->s, r->len))
+    return response_rcode(RCODE_FORMERR), 0;
+  if (!dns_packet_copy(&pos, qclass, 2, r->s, r->len))
+    return response_rcode(RCODE_FORMERR), 0;
+
+  r->len = 12; /* inherit ID, RD and QDCOUNT */
+  memset(r->s + 6, 0, 6); /* ANCOUNT, NSCOUNT, ARCOUNT */
+
   if (!response_addname(qname->s))
-    return 0;
+    return response_rcode(RCODE_SERVFAIL), 0;
   if (!response_addbytes(qtype, 2))
-    return 0;
+    return response_rcode(RCODE_SERVFAIL), 0;
   if (!response_addbytes(qclass, 2))
-    return 0;
+    return response_rcode(RCODE_SERVFAIL), 0;
   return 1;
 }
 
@@ -115,20 +115,25 @@ void response_authoritative(int flag) {
 }
 
 void response_rcode(uint8_t rcode) {
-  if (rcode == RCODE_FORMERR || rcode == RCODE_SERVFAIL
-        || rcode == RCODE_NOTIMPL || rcode == RCODE_REFUSED) {
+  if (rcode == RCODE_FORMERR
+        || rcode == RCODE_SERVFAIL
+        || rcode == RCODE_NOTIMPL
+        || rcode == RCODE_REFUSED) {
     size_t pos = 12;
-    if (response_skipname(&pos)) {
+    response->s[2] &= ~4; /* AA = 0 */
+
+    if (!memcmp(response->s + 4, "\0\1", 2)
+          && response_skipname(&pos)
+          && response->len >= pos + 4) {
       memset(response->s + 6, 0, 6);
       response->len = pos + 4;
     } else {
       memset(response->s + 4, 0, 8);
       response->len = 12;
     }
-    response->s[2] &= ~4;
   }
-  response->s[3] &= ~15;
-  response->s[3] |= rcode;
+  response->s[2] |= 128; /* QR = 1 */
+  response->s[3] = rcode;
 }
 
 int response_rstart(const char *d, const char type[2], uint32_t ttl) {

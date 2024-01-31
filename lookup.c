@@ -372,10 +372,8 @@ void lookup(stralloc *r, size_t max, const void *ip, size_t iplen) {
   static stralloc qname;
   char qtype[2], qclass[2];
 
-  if (!response_query(r, &qname, qtype, qclass)) {
-    stralloc_zero(r);
+  if (!response_query(r, &qname, qtype, qclass))
     return;
-  }
 
   if (!memcmp(qclass, DNS_C_IN, 2)) {
     response_authoritative(1);
