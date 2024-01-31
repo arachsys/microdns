@@ -21,6 +21,10 @@ static stralloc f[15], key, rr;
 static stralloc soa_rname;
 static uint32_t soa_serial;
 
+const uint32_t soa_refresh = 16384;
+const uint32_t soa_retry = 2048;
+const uint32_t soa_expire = 1048576;
+
 static uint32_t ttl_nameserver = 259200;
 static uint32_t ttl_positive = 86400;
 static uint32_t ttl_negative = 2560;
@@ -262,23 +266,23 @@ static int doline(void) {
 
       if (!parse_uint32(&u32, &f[3], soa_serial))
         return 0;
-      pack_uint32_big(bytes, u32); /* serial */
+      pack_uint32_big(bytes, u32);
 
-      if (!parse_uint32(&u32, &f[4], 16384))
+      if (!parse_uint32(&u32, &f[4], soa_refresh))
         return 0;
-      pack_uint32_big(bytes + 4, u32); /* refresh */
+      pack_uint32_big(bytes + 4, u32);
 
-      if (!parse_uint32(&u32, &f[5], 2048))
+      if (!parse_uint32(&u32, &f[5], soa_retry))
         return 0;
-      pack_uint32_big(bytes + 8, u32); /* retry */
+      pack_uint32_big(bytes + 8, u32);
 
-      if (!parse_uint32(&u32, &f[6], 1048576))
+      if (!parse_uint32(&u32, &f[6], soa_expire))
         return 0;
-      pack_uint32_big(bytes + 12, u32); /* expire */
+      pack_uint32_big(bytes + 12, u32);
 
       if (!parse_uint32(&u32, &f[7], ttl))
         return 0;
-      pack_uint32_big(bytes + 16, u32); /* minimum */
+      pack_uint32_big(bytes + 16, u32);
 
       rr_start(DNS_T_SOA, ttl, ttd, loc);
       rr_addname(d2.s);
@@ -317,11 +321,11 @@ static int doline(void) {
           rr_add("\12hostmaster", 11);
           rr_addname(d1.s);
         }
-        pack_uint32_big(bytes, soa_serial); /* serial */
-        pack_uint32_big(bytes + 4, 16384); /* refresh */
-        pack_uint32_big(bytes + 8, 2048); /* retry */
-        pack_uint32_big(bytes + 12, 1048576); /* expire */
-        pack_uint32_big(bytes + 16, ttl_negative); /* minimum */
+        pack_uint32_big(bytes, soa_serial);
+        pack_uint32_big(bytes + 4, soa_refresh);
+        pack_uint32_big(bytes + 8, soa_retry);
+        pack_uint32_big(bytes + 12, soa_expire);
+        pack_uint32_big(bytes + 16, ttl_negative);
         rr_add(bytes, 20);
         rr_finish(d1.s);
       }
