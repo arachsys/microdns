@@ -80,22 +80,22 @@ static int find(char *name, int wild) {
 }
 
 static int locate(const void *ip, size_t len) {
-  char key[19];
+  char key[18];
   int rc = 0;
 
   memset(cloc, 0, 2);
   switch (len) {
     case 4: /* IPv4 */
-      memcpy(key, "\0%4", 3);
-      memcpy(key + 3, ip, 4);
-      for (int n = 7; n >= 3 && rc == 0; n--)
+      memcpy(key, "\0%", 2);
+      memcpy(key + 2, ip, 4);
+      for (int n = 6; n >= 2 && rc == 0; n--)
         if ((rc = cdb_find(&c, key, n)) < 0)
           return 0;
       break;
     case 16: /* IPv6 */
-      memcpy(key, "\0%6", 3);
-      memcpy(key + 3, ip, 16);
-      for (int n = 19; n >= 3 && rc == 0; n -= 2)
+      memcpy(key, "\0&", 2);
+      memcpy(key + 2, ip, 16);
+      for (int n = 18; n >= 2 && rc == 0; n -= 2)
         if ((rc = cdb_find(&c, key, n)) < 0)
           return 0;
       break;

@@ -215,7 +215,7 @@ static int doline(void) {
         return 0;
       if (f[1].len == 1 && *f[1].s == '4') {
         if (scan_ip4_prefix(f[2].s, bytes, &len, 4) == f[2].len) {
-          if (!stralloc_copyb(&key, "\0%4", 3))
+          if (!stralloc_copyb(&key, "\0%", 2))
             err(1, "stralloc");
           if (!stralloc_catb(&key, bytes, len))
             err(1, "stralloc");
@@ -226,7 +226,7 @@ static int doline(void) {
       }
       if (f[1].len == 1 && *f[1].s == '6') {
         if (scan_ip6_prefix(f[2].s, bytes, &len, 16) == f[2].len) {
-          if (!stralloc_copyb(&key, "\0%6", 3))
+          if (!stralloc_copyb(&key, "\0&", 2))
             err(1, "stralloc");
           if (!stralloc_catb(&key, bytes, len))
             err(1, "stralloc");
