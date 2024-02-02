@@ -85,6 +85,31 @@ static int parse_mail(stralloc *out, const stralloc *in) {
   return 1;
 }
 
+static void parse_text(stralloc *sa) {
+  size_t i = 0, j = 0;
+  uint8_t byte;
+
+  while (i < sa->len) {
+    byte = sa->s[i++];
+    if (byte == '\\') {
+      if (i >= sa->len)
+        break;
+      byte = sa->s[i++];
+
+      if (byte >= '0' && byte <= '7') {
+        byte = byte - '0';
+        if (i < sa->len && sa->s[i] >= '0' && sa->s[i] <= '7') {
+          byte = (byte << 3) + sa->s[i++] - '0';
+          if (i < sa->len && sa->s[i] >= '0' && sa->s[i] <= '7')
+            byte = (byte << 3) + sa->s[i++] - '0';
+        }
+      }
+    }
+    sa->s[j++] = byte;
+  }
+  sa->len = j;
+}
+
 static int parse_ttl(uint32_t *ttl, const stralloc *in, uint32_t def) {
   if (in->len == 0)
     *ttl = def;
@@ -450,6 +475,7 @@ static int doline(void) {
       if (!parse_loc(loc, &f[4]))
         return 0;
 
+      parse_text(&f[1]);
       rr_start(DNS_T_TXT, ttl, ttd, loc);
       for (size_t i = 0, n; i < f[1].len; i += n) {
         n = f[1].len - i;
@@ -495,6 +521,7 @@ static int doline(void) {
       if (!memcmp(bytes, DNS_T_AXFR, 2))
         return fail("Type AXFR is prohibited");
 
+      parse_text(&f[2]);
       rr_start(bytes, ttl, ttd, loc);
       rr_add(f[2].s, f[2].len);
       rr_finish(d1.s);
@@ -561,54 +588,31 @@ int main(int argc, char **argv) {
     err(1, "cdb");
 
   while (linec++, getline(&line, &size, stdin) >= 0) {
-    size_t i, j, ws = 0;
-    uint8_t byte;
-
-    if (*line == 0 || *line == '\n' || *line == '#')
+    for (size_t i = strlen(line); i-- > 0; line[i] = 0)
+      if (line[i] != '\t' && line[i] != '\n' && line[i] != ' ')
+        break;
+    if (line[0] == 0 || line[0] == '#')
       continue;
 
-    for (i = 0; i < sizeof f / sizeof *f; i++)
-      stralloc_zero(&f[i]);
+    for (size_t j = 0; j < sizeof f / sizeof *f; j++)
+      stralloc_zero(&f[j]);
 
-    for (i = 0, j = 1; line[j] && i < sizeof f / sizeof *f; j++) {
-      if (line[j] != '\t' && line[j] != '\n' && line[j] != ' ')
-        ws = 0;
-      else
-        ws++;
-
-      switch (line[j]) {
-        case ':':
-          i++;
-          continue;
-        case '\\':
-          if (line[j + 1] == 0 || line[j + 1] == '\n') {
-            if (linec++, getline(&line, &size, stdin) < 0)
-              line[0] = 0;
-            j = -1;
-            continue;
-          }
-          if (line[j + 1] >= '0' && line[j + 1] <= '7') {
-            byte = line[++j] - '0';
-            if (line[j + 1] >= '0' && line[j + 1] <= '7') {
-              byte = (byte << 3) + line[++j] - '0';
-              if (line[j + 1] >= '0' && line[j + 1] <= '7')
-                byte = (byte << 3) + line[++j] - '0';
-            }
-            break;
-          }
-          byte = line[++j];
-          break;
-        default:
-          byte = line[j];
+    for (size_t i = 1, j = 0; line[i] && j < sizeof f / sizeof *f; i++) {
+      if (line[i] == '\\' && line[i + 1] && line[i + 1] != '\n') {
+        if (line[i + 1] == ':' && !stralloc_catb(&f[j], ":", 1))
+          err(1, "stralloc");
+        if (line[i + 1] != ':' && !stralloc_catb(&f[j], line + i, 2))
+          err(1, "stralloc");
+        i += 1;
+      } else {
+        if (line[i] != ':' && !stralloc_catb(&f[j], line + i, 1))
+          err(1, "stralloc");
+        j += line[i] == ':';
       }
-      if (!stralloc_catb(&f[i], &(char) { byte }, 1))
-        err(1, "stralloc");
     }
 
-    if (i < sizeof f / sizeof *f)
-      f[i].len -= ws;
-    for (i = 0; i < sizeof f / sizeof *f; i++)
-      if (!stralloc_guard(&f[i]))
+    for (size_t j = 0; j < sizeof f / sizeof *f; j++)
+      if (!stralloc_guard(&f[j]))
         err(1, "stralloc");
     if (!doline())
       failc++;
