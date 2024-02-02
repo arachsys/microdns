@@ -16,7 +16,7 @@ int cdb_make_start(struct cdb_make *c, const char *filename) {
   c->hash = 0;
   c->entries = 0;
   c->pos = sizeof c->final;
-  c->file = fopen(filename, "wb");
+  c->file = filename ? fopen(filename, "w") : tmpfile();
   return c->file ? fseek(c->file, c->pos, SEEK_SET) : -1;
 }
 

@@ -584,7 +584,7 @@ int main(int argc, char **argv) {
   else
     soa_serial = time(0);
 
-  if (cdb_make_start(&cdb, "data.tmp") < 0)
+  if (cdb_make_start(&cdb, dummy ? 0 : "data.tmp") < 0)
     err(1, "cdb");
 
   while (linec++, getline(&line, &size, stdin) >= 0) {
@@ -621,7 +621,10 @@ int main(int argc, char **argv) {
   if (cdb_make_finish(&cdb) < 0)
     err(1, "cdb");
 
-  if (dummy || (failc > 0 && !force)) {
+  if (dummy) {
+    printf("Read %zu lines with %zu errors\n", linec - 1, failc);
+    printf("Wrote %u entries in %u bytes\n", cdb.entries, cdb.pos);
+  } else if (failc && !force) {
     if (unlink("data.tmp") < 0)
       err(1, "unlink");
   } else {
