@@ -265,7 +265,6 @@ ANSWER:
         return 0;
       response_rfinish(RESPONSE_ANSWER);
     }
-    response_rcode(RCODE_NOERROR);
   } else {
     response_rcode(RCODE_NXDOMAIN);
   }

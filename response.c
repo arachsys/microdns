@@ -105,6 +105,8 @@ int response_query(stralloc *r, stralloc *qname, char qtype[2],
     return response_rcode(RCODE_SERVFAIL), 0;
   if (!response_addbytes(qclass, 2))
     return response_rcode(RCODE_SERVFAIL), 0;
+
+  response_rcode(RCODE_NOERROR);
   return 1;
 }
 
@@ -161,7 +163,7 @@ void response_rfinish(size_t section) {
 void response_finish(size_t len) {
   if (len < response->len) {
     size_t pos = 12;
-    if (response_skipname(&pos)) {
+    if (response_skipname(&pos) && len >= pos + 4) {
       memset(response->s + 6, 0, 6);
       response->len = pos + 4;
     } else {
@@ -170,7 +172,4 @@ void response_finish(size_t len) {
     }
     response->s[2] |= 2;
   }
-  if (len < response->len)
-    response->len = len;
-  return;
 }
