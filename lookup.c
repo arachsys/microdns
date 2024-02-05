@@ -36,6 +36,18 @@ static int doname(stralloc *name) {
   return response_addname(name->s);
 }
 
+static int dowild(stralloc *name, const char *replace, size_t len) {
+  if (!dns_packet_getname(&dpos, name, data, dlen))
+    return 0;
+  if (name->s[0] == 1 && name->s[1] == '*') {
+    if (!stralloc_ready(name, name->len + len - 2))
+      return 0;
+    memmove(name->s + len, name->s + 2, name->len - 2);
+    memcpy(name->s, replace, len);
+  }
+  return response_addname(name->s);
+}
+
 static int find(char *name, int wild) {
   while (1) {
     char byte, rloc[2], ttlstr[4], ttdstr[8];
@@ -215,7 +227,7 @@ ANSWER:
         if (!doname(&name))
           return 0;
       } else if (!memcmp(type, DNS_T_CNAME, 2)) {
-        if (!doname(&name))
+        if (!dowild(&name, qname->s, wild - qname->s))
           return 0;
         if (memcmp(type, qtype, 2) && ++restarted < 16) {
           response_rfinish(RESPONSE_ANSWER);

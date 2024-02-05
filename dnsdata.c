@@ -174,7 +174,7 @@ static void rr_start(const char type[2], uint32_t ttl, uint64_t ttd,
 }
 
 static void rr_finish(const char *owner) {
-  if (!memcmp(owner, "\1*", 2)) {
+  if (owner[0] == 1 && owner[1] == '*') {
     owner += 2;
     rr.s[2] -= 19;
   }
