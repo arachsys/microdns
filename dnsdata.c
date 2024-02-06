@@ -328,8 +328,6 @@ static int doline(void) {
       }
       if (!parse_name(&d2, &f[2]))
         return 0;
-      if (!parse_name(&d2, &f[2]))
-        return 0;
       if (!parse_ttl(&ttl, &f[3], ttl_nameserver))
         return 0;
       if (!parse_ttd(&ttd, &f[4]))
