@@ -477,8 +477,8 @@ static int doline(void) {
       rr_start(DNS_T_TXT, ttl, ttd, loc);
       for (size_t i = 0, n; i < f[1].len; i += n) {
         n = f[1].len - i;
-        if (n > 127)
-          n = 127;
+        if (n > 255)
+          n = 255;
         rr_add(&(char) { n }, 1);
         rr_add(f[1].s + i, n);
       }
