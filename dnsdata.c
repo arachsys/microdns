@@ -513,16 +513,17 @@ Options:\n\
   -d DIR    change directory to DIR before replacing data.cdb\n\
   -f        replace data.cdb even if some lines have errors\n\
   -n        validate input lines without replacing data.cdb\n\
+  -t FS     use FS instead of ':' as field separator character\n\
 ", progname);
   return 64;
 }
 
 int main(int argc, char **argv) {
   int dummy = 0, force = 0;
+  char fs = ':', option;
   struct stat st;
-  char option;
 
-  while ((option = getopt(argc, argv, ":d:fn")) > 0)
+  while ((option = getopt(argc, argv, ":d:fnt:")) > 0)
     switch (option) {
       case 'd':
         if (chdir(optarg) < 0)
@@ -533,6 +534,11 @@ int main(int argc, char **argv) {
         break;
       case 'n':
         dummy = 1;
+        break;
+      case 't':
+       if (strlen(optarg) != 1 || memchr("\n\\", *optarg, 2))
+          errx(1, "Invalid field separator");
+        fs = *optarg;
         break;
       default:
         return usage(argv[0]);
@@ -563,15 +569,15 @@ int main(int argc, char **argv) {
 
     for (size_t i = 1, j = 0; line[i] && j < sizeof f / sizeof *f; i++) {
       if (line[i] == '\\' && line[i + 1] && line[i + 1] != '\n') {
-        if (line[i + 1] == ':' && !stralloc_catb(&f[j], ":", 1))
+        if (line[i + 1] == fs && !stralloc_catb(&f[j], &fs, 1))
           err(1, "stralloc");
-        if (line[i + 1] != ':' && !stralloc_catb(&f[j], line + i, 2))
+        if (line[i + 1] != fs && !stralloc_catb(&f[j], line + i, 2))
           err(1, "stralloc");
         i += 1;
       } else {
-        if (line[i] != ':' && !stralloc_catb(&f[j], line + i, 1))
+        if (line[i] != fs && !stralloc_catb(&f[j], line + i, 1))
           err(1, "stralloc");
-        j += line[i] == ':';
+        j += line[i] == fs;
       }
     }
 
