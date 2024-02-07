@@ -185,48 +185,7 @@ static void rr_finish(const char *owner) {
     err(1, "cdb");
 }
 
-static int dohost(const stralloc *name, const stralloc *address,
-    uint32_t ttl, uint64_t ttd, const char loc[2], int reverse) {
-  static stralloc ptr;
-  char ip4[4], ip6[16];
-  size_t len;
-
-  len = scan_ip4(address->s, ip4);
-  if (len && len == address->len) {
-    rr_start(DNS_T_A, ttl, ttd, loc);
-    rr_add(ip4, sizeof ip4);
-    rr_finish(name->s);
-    if (reverse) {
-      if (!dns_name4_domain(&ptr, ip4))
-        err(1, "stralloc");
-      rr_start(DNS_T_PTR, ttl, ttd, loc);
-      rr_addname(name->s);
-      rr_finish(ptr.s);
-    }
-    return 1;
-  }
-
-  len = scan_ip6(address->s, ip6);
-  if (len && len == address->len) {
-    rr_start(DNS_T_AAAA, ttl, ttd, loc);
-    rr_add(ip6, sizeof ip6);
-    rr_finish(name->s);
-    if (reverse) {
-      if (!dns_name6_domain(&ptr, ip6))
-        err(1, "stralloc");
-      rr_start(DNS_T_PTR, ttl, ttd, loc);
-      rr_addname(name->s);
-      rr_finish(ptr.s);
-    }
-    return 1;
-  }
-
-  if (address->len)
-    return fail("Invalid IP address: %s", address->s);
-  return 1;
-}
-
-static int doline(void) {
+static int append(void) {
   static stralloc d1, d2, d3;
   char bytes[20], loc[2];
   uint16_t u16;
@@ -320,19 +279,13 @@ static int doline(void) {
     case '&':
       if (!parse_name(&d1, &f[0]))
         return 0;
-      if (!memchr(f[2].s, '.', f[2].len)) {
-        if (!stralloc_cats(&f[2], ".ns."))
-          err(1, "stralloc");
-        if (!stralloc_catb(&f[2], f[0].s, f[0].len))
-          err(1, "stralloc");
-      }
-      if (!parse_name(&d2, &f[2]))
+      if (!parse_name(&d2, &f[1]))
         return 0;
-      if (!parse_ttl(&ttl, &f[3], ttl_nameserver))
+      if (!parse_ttl(&ttl, &f[2], ttl_nameserver))
         return 0;
-      if (!parse_ttd(&ttd, &f[4]))
+      if (!parse_ttd(&ttd, &f[3]))
         return 0;
-      if (!parse_loc(loc, &f[5]))
+      if (!parse_loc(loc, &f[4]))
         return 0;
 
       if (*line == '.') {
@@ -356,8 +309,7 @@ static int doline(void) {
       rr_start(DNS_T_NS, ttl, ttd, loc);
       rr_addname(d2.s);
       rr_finish(d1.s);
-
-      return dohost(&d2, &f[1], ttl, ttd, loc, 0);
+      return 1;
 
     case '+':
     case '=':
@@ -370,30 +322,52 @@ static int doline(void) {
       if (!parse_loc(loc, &f[4]))
         return 0;
 
-      if (!dohost(&d1, &f[1], ttl, ttd, loc, *line == '='))
-        return 0;
-      if (!f[1].len)
-        return fail("Missing IP address");
-      return 1;
+      len = scan_ip4(f[1].s, bytes);
+      if (len && len == f[1].len) {
+        rr_start(DNS_T_A, ttl, ttd, loc);
+        rr_add(bytes, 4);
+        rr_finish(d1.s);
+        if (*line == '=') {
+          if (!dns_name4_domain(&d2, bytes))
+            err(1, "stralloc");
+          rr_start(DNS_T_PTR, ttl, ttd, loc);
+          rr_addname(d1.s);
+          rr_finish(d2.s);
+        }
+        return 1;
+      }
+
+      len = scan_ip6(f[1].s, bytes);
+      if (len && len == f[1].len) {
+        rr_start(DNS_T_AAAA, ttl, ttd, loc);
+        rr_add(bytes, 16);
+        rr_finish(d1.s);
+        if (*line == '=') {
+          if (!dns_name6_domain(&d2, bytes))
+            err(1, "stralloc");
+          rr_start(DNS_T_PTR, ttl, ttd, loc);
+          rr_addname(d1.s);
+          rr_finish(d2.s);
+        }
+        return 1;
+      }
+
+      if (f[1].len)
+        return fail("Invalid IP address: %s", f[1].s);
+      return fail("Missing IP address");
 
     case '@':
       if (!parse_name(&d1, &f[0]))
         return 0;
-      if (!memchr(f[2].s, '.', f[2].len)) {
-        if (!stralloc_cats(&f[2], ".mx."))
-          err(1, "stralloc");
-        if (!stralloc_catb(&f[2], f[0].s, f[0].len))
-          err(1, "stralloc");
-      }
-      if (!parse_name(&d2, &f[2]))
+      if (!parse_name(&d2, &f[1]))
         return 0;
-      if (!parse_uint16(&u16, &f[3], 0))
+      if (!parse_uint16(&u16, &f[2], 0))
         return 0;
-      if (!parse_ttl(&ttl, &f[4], ttl_positive))
+      if (!parse_ttl(&ttl, &f[3], ttl_positive))
         return 0;
-      if (!parse_ttd(&ttd, &f[5]))
+      if (!parse_ttd(&ttd, &f[4]))
         return 0;
-      if (!parse_loc(loc, &f[6]))
+      if (!parse_loc(loc, &f[5]))
         return 0;
 
       rr_start(DNS_T_MX, ttl, ttd, loc);
@@ -401,46 +375,38 @@ static int doline(void) {
       rr_add(bytes, 2);
       rr_addname(d2.s);
       rr_finish(d1.s);
-
-      return dohost(&d2, &f[1], ttl, ttd, loc, 0);
+      return 1;
 
     case 'S':
       if (!parse_name(&d1, &f[0]))
         return 0;
-      if (!memchr(f[2].s, '.', f[2].len)) {
-        if (!stralloc_cats(&f[2], ".srv."))
-          err(1, "stralloc");
-        if (!stralloc_catb(&f[2], f[0].s, f[0].len))
-          err(1, "stralloc");
-      }
-      if (!parse_name(&d2, &f[2]))
+      if (!parse_name(&d2, &f[1]))
         return 0;
-
-      if (!parse_uint16(&u16, &f[4], 0))
-        return 0;
-      pack_uint16_big(bytes, u16);
-
-      if (!parse_uint16(&u16, &f[5], 0))
-        return 0;
-      pack_uint16_big(bytes + 2, u16);
 
       if (!parse_uint16(&u16, &f[3], 0))
         return 0;
+      pack_uint16_big(bytes, u16);
+
+      if (!parse_uint16(&u16, &f[4], 0))
+        return 0;
+      pack_uint16_big(bytes + 2, u16);
+
+      if (!parse_uint16(&u16, &f[2], 0))
+        return 0;
       pack_uint16_big(bytes + 4, u16);
 
-      if (!parse_ttl(&ttl, &f[6], ttl_positive))
+      if (!parse_ttl(&ttl, &f[5], ttl_positive))
         return 0;
-      if (!parse_ttd(&ttd, &f[7]))
+      if (!parse_ttd(&ttd, &f[6]))
         return 0;
-      if (!parse_loc(loc, &f[8]))
+      if (!parse_loc(loc, &f[7]))
         return 0;
 
       rr_start(DNS_T_SRV, ttl, ttd, loc);
       rr_add(bytes, 6);
       rr_addname(d2.s);
       rr_finish(d1.s);
-
-      return dohost(&d2, &f[1], ttl, ttd, loc, 0);
+      return 1;
 
     case 'C':
     case '^':
@@ -612,7 +578,7 @@ int main(int argc, char **argv) {
     for (size_t j = 0; j < sizeof f / sizeof *f; j++)
       if (!stralloc_guard(&f[j]))
         err(1, "stralloc");
-    if (!doline())
+    if (!append())
       failc++;
   }
 
