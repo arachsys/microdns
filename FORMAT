@@ -1,0 +1,167 @@
+Text format
+===========
+
+Each record or directive is a single line whose first character determines
+its type. The rest of the line consists of :-separated fields. Blank lines,
+trailing whitespace and lines beginning with the comment character # are
+all ignored.
+
+The \ character can be used within a field to escape both : and itself as
+\: and \\ respectively. In domain names and text fields, it also introduces
+octal escapes (such as \12 or \012 for newline) and will escape any other
+single character from special interpretation.
+
+Domain names should be fully qualified without a trailing dot. Numeric
+fields expect decimal integers and assume default values if left blank.
+Signed fields allow an optional + or - prefix.
+
+IPv4 addresses are given as dotted decimal quads, such as 192.0.2.1.
+IPv6 addresses can be abbreviated in the form 2001:db8::1, but for
+convenience this can also be written 2001.db8..1, where dots replace
+colons which would otherwise need \-escaping in :-separated fields.
+
+The field separator : can be changed to any other single byte using the
+dnsdata -t option, but the escape and newline characters are fixed.
+
+
+Client locations
+----------------
+
+  %lo:4:prefix  - add IPv4 prefix to location lo
+  %lo:6:prefix  - add IPv6 prefix to location lo
+
+Here lo is an arbitrary two character code to which one or more IPv4
+and/or IPv6 prefixes are associated to define a location. Any DNS record
+in the data file can then be restricted to clients from that location.
+
+IPv4 prefixes consist of zero to four dot-separated 8-bit decimals and
+IPv6 prefixes consist of zero to eight dot-separated 16-bit hexadecimals.
+Unlike addresses, IPv6 prefixes cannot be abbreviated without ambiguity.
+
+The most specific prefix that matches a given client's source address
+determines the single location to which it belongs.
+
+
+DNS records
+-----------
+
+Available record types are
+
+  .name:ns:ttl:ttd:lo           - add an SOA and NS pair
+  &name:ns:ttl:ttd:lo           - add an NS record
+  +name:ip:ttl:ttd:lo           - add an A/AAAA record
+  =name:ip:ttl:ttd:lo           - add an A/AAAA and reverse PTR pair
+  @name:mx:priority:ttl:ttd:lo  - add an MX record
+  'name:data:ttl:ttd:lo         - add a TXT record
+  ^name:ptr:ttl:ttd:lo          - add a PTR record
+  Cname:cname:ttl:ttd:lo        - add a CNAME record
+  Sname:host:port:priority:weight:ttl:ttd:lo
+                                - add an SRV record
+  Zname:mname:rname:serial:refresh:retry:expire:minimum:ttl:ttd:lo
+                                - add a custom SOA record
+  :name:n:data:ttl:ttd:lo       - add a record of generic type n
+  -name:ttd:lo                  - declare an empty non-terminal
+
+ttl overrides the cacheable lifetime of the record in seconds. Its default
+value depends on the record type and can be configured by ! lines.
+
+ttd is an optional signed unix timestamp. If it is positive, the record
+will not be published before that time. If it is negative, the record
+will not be published after that time.
+
+lo is the optional two-character location restricting the record's
+visibility.
+
+ip can be either IPv4 or IPv6. + and = lines select an A or AAAA record
+automatically and = lines put the reverse PTR into in-addr.arpa or
+ip6.arpa appropriately.
+
+An authoritative zone is conventionally defined with a . line for
+each nameserver, and a sub-zone is delegated elsewhere with & lines.
+
+Record names beginning *. act as wildcards with the meaning and shadowing
+rules laid out in section 4.3.3 of RFC 1034. If the target of a C line
+begins *. too, we serve synthetic CNAMEs in which the target wildcard
+is replaced with the query name prefix matching the corresponding label
+wildcard, effectively implementing a subtree redirect.
+
+A simple example zone with SOA, NS, MX and host records might look like:
+
+  .example.com:a.ns.example.com
+  .example.com:b.ns.example.com
+
+  -ns.example.com
+  =a.ns.example.com:192.0.2.1
+  =a.ns.example.com:2001.db8..1
+  =b.ns.example.com:192.0.2.2
+  =b.ns.example.com:2001.db8..2
+
+  @example.com:mail.example.com:0
+  =mail.example.com:192.0.2.3
+  =mail.example.com:2001.db8..3
+
+The = lines in this forward zone will automatically create PTR records
+in the relevant reverse zones:
+
+  .2.0.192.in-addr.arpa:a.ns.example.com
+  .2.0.192.in-addr.arpa:b.ns.example.com
+
+  .8.b.d.0.1.0.0.2.ip6.arpa:a.ns.example.com
+  .8.b.d.0.1.0.0.2.ip6.arpa:b.ns.example.com
+  -*.8.b.d.0.1.0.0.2.ip6.arpa
+
+The - lines declare nodes that have children but no records of their own.
+These comply with RFC 8020 by responding with NODATA instead of NXDOMAIN.
+Typically they are needed as wildcards at the top of deep reverse zones
+and individually in forward zones with deliberate empty non-terminals
+like ns.example.com above.
+
+
+RNAME and TTL defaults
+----------------------
+
+A configuration line of the form
+
+  !rname:ttl-ns:ttl-positive:ttl-negative
+
+changes the default values for subsequent records in the data file.
+
+rname is the email address used as 'responsible person' in SOA records.
+By default or if it is set empty, hostmaster at the zone root is used.
+
+ttl-ns is the time (in seconds) for which NS records can be cached.
+ttl-positive is the time for which successful results can be cached.
+ttl-negative is the time for which negative responses can be cached.
+By default these are 259200, 86400 and 2560 seconds respectively.
+
+
+Binary format
+=============
+
+data.cdb is a 32-bit CDB file constructed by cdb/make.c and accessed
+by cdb/cdb.c.
+
+Keys beginning "\0%" with up to four bytes of IPv4 address prefix associate
+that prefix with the two character location in the corresponding value.
+
+Keys beginning "\0&" with up to sixteen bytes of IPv6 address prefix
+associate that prefix with the two character location in the corresponding
+value. Only even-length byte prefixes are checked against IPv6 addresses.
+
+All other keys are domain names encoded in uncompressed DNS packet format,
+with values consisting of
+
+  - two-byte rtype
+  - "=" or ">lo" where lo is a two-byte location; or
+    "*" or "+lo" if the key is for a wildcard node
+  - 32-bit TTL
+  - 64-bit TTD
+
+then rtype-specific data, typically following the wire rdata ordering.
+
+Domain names, rtypes and numbers are always in DNS packet format and
+big-endian. A positive TTD +t is stored unsigned as t; a negative TTD -t
+is stored unsigned as t + 0x8000000000000000.
+
+Empty non-terminals are recorded as dummy records with rtype ANY, zero
+TTL and no rdata.
