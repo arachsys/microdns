@@ -1,13 +1,15 @@
+BINDIR := $(PREFIX)/bin
+BINARIES := dnsdata tcpdns udpdns
+
 CFLAGS := -ffunction-sections -O2 -Wall -Wno-unused-label
 LDFLAGS := -Wl,--gc-sections
 
 %:: %.c Makefile
 	$(CC) $(CFLAGS) $(LDFLAGS) -I . -o $@ $(filter %.c,$^)
 
-all: dnsdata tcpdns udpdns
+all: $(BINARIES)
 
-clean:
-	rm -f dnsdata tcpdns udpdns
+dnsdata: cdb/cdb.h cdb/make.[ch] dns.[ch] pack.h scan.[ch] stralloc.h
 
 tcpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] scan.[ch] \
   server.c stralloc.h
@@ -15,6 +17,11 @@ tcpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] scan.[ch] \
 udpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] scan.[ch] \
   server.c stralloc.h
 
-dnsdata: cdb/cdb.h cdb/make.[ch] dns.[ch] pack.h scan.[ch] stralloc.h
+install: $(BINARIES)
+	mkdir -p $(DESTDIR)$(BINDIR)
+	install -s $(BINARIES) $(DESTDIR)$(BINDIR)
 
-.PHONY: all clean
+clean:
+	rm -f $(BINARIES)
+
+.PHONY: all clean install
