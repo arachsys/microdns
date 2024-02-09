@@ -1,0 +1,80 @@
+microdns
+========
+
+microdns is a database-backed authoritative nameserver based on Dan
+Bernstein's public domain tinydns, but reworked and updated for modern
+RFC compliance, efficient multiplexed TCP service and full IPv6 support.
+
+Unlike the original djbdns distribution, microdns does not include AXFR
+facilities, a caching recursive server, or the client library and tools.
+Its data file format has also diverged a little from that of tinydns.
+
+
+dnsdata
+-------
+
+To generate data.cdb in the current directory, pass text records as
+described in FORMAT to dnsdata on stdin:
+
+  dnsdata < data
+
+The database is first compiled in data.tmp then, if no errors were
+encountered, data.cdb is atomically replaced by renaming data.tmp on top.
+
+Input errors will be reported on stderr with the offending line number,
+in which case data.cdb will not be replaced and dnsdata will exit with
+status 2 instead of 0. Program errors such as memory exhaustion or failure
+to write data.tmp are flagged with exit status 1.
+
+Use -f to forcibly replace data.cdb despite input errors, -n to validate
+input without touching data.cdb, and -t FS to change field separator from
+the standard colon. Run dnsdata without arguments on a terminal for help
+and a full list of options.
+
+If stdin comes from a regular file, the file's modification time is
+used as the default SOA serial number. If dnsdata reads from a pipe,
+the program invocation time is used instead.
+
+
+udpdns and tcpdns
+-----------------
+
+UDP port 53 service is provided by udpdns and TCP port 53 service is
+provided by tcpdns. Each offers help when run without arguments.
+
+Given one or more IPv4 and/or IPv6 addresses on the command line, tcpdns
+and udpdns will bind to them, fork into the background then respond
+to inbound queries using the data.cdb file in the current directory.
+They detect updates to data.cdb automatically and need not be restarted.
+
+The -f flag keeps the server in the foreground, and -u USER or -u UID:GID
+instructs it to drop root privileges after binding sockets. It chroots
+into the current directory with data.cdb before doing so.
+
+Both server types are single-threaded. tcpdns uses poll() to service a
+pool of up to 256 concurrent query streams and udpdns handles datagram
+queries sequentially. Authoritative DNS service is cheap so one daemon of
+each type is usually ample. However, sockets are bound with SO_REUSEPORT
+or SO_REUSEPORT_LB to enable multiple instances to coexist on the same
+addresses if necessary, sharing load across processes and cores.
+
+
+Building and installing
+-----------------------
+
+Run 'make install' at the top of the source tree to install dnsdata,
+tcpdns and udpdns in /bin. Alternatively, you can set DESTDIR and/or
+BINDIR to install in a different location, or make, strip and copy the
+binaries into the correct place manually.
+
+The programs should be portable to any reasonably modern POSIX system.
+Please report any problems or bugs to Chris Webb <chris@arachsys.com>.
+
+
+Copying
+-------
+
+This software is based on Dan Bernstein's djbdns and cdb packages which
+he placed in the public domain on 28th December 2007 and 21st July 2009
+respectively. It is maintained by Chris Webb <chris@arachsys.com> and is
+distributed as Free Software under the terms of the MIT license in COPYING.
