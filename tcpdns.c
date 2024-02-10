@@ -55,7 +55,7 @@ void attach(const char *address, const char *port) {
       &(int) { 1 }, sizeof(int));
 #endif
 
-    if (bind(fd[fdc].fd, info->ai_addr, info->ai_addrlen) == -1)
+    if (bind(fd[fdc].fd, info->ai_addr, info->ai_addrlen) < 0)
       err(1, "bind");
     if (listen(fd[fdc].fd, SOMAXCONN) < 0)
       err(1, "listen");

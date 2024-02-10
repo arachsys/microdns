@@ -51,10 +51,10 @@ static int dowild(stralloc *name, const char *replace, size_t len) {
 static int find(char *name, int wild) {
   while (1) {
     char byte, rloc[2], ttlstr[4], ttdstr[8];
-    int r = cdb_findnext(&c, name, dns_domain_length(name));
+    int rc = cdb_findnext(&c, name, dns_domain_length(name));
 
-    if (r <= 0)
-      return r;
+    if (rc <= 0)
+      return rc;
     if (dlen = cdb_datalen(&c), dlen > sizeof data)
       return -1;
     if (cdb_read(&c, data, dlen, cdb_datapos(&c)) < 0)
@@ -210,7 +210,7 @@ ANSWER:
   while (1) {
     cdb_findstart(&c);
     while ((rc = find(wild, wild != qname->s))) {
-      if (rc == -1)
+      if (rc < 0)
         return 0;
       found++;
 
@@ -287,7 +287,7 @@ AUTHORITY:
   if (authoritative && authority == answer) {
     cdb_findstart(&c);
     while ((rc = find(control, 0))) {
-      if (rc == -1)
+      if (rc < 0)
         return 0;
       if (!memcmp(type, DNS_T_SOA, 2)) {
         if (!response_rstart(control, DNS_T_SOA, ttl))
@@ -306,7 +306,7 @@ AUTHORITY:
     if (want(control, DNS_T_NS)) {
       cdb_findstart(&c);
       while ((rc = find(control, 0))) {
-        if (rc == -1)
+        if (rc < 0)
           return 0;
         if (!memcmp(type, DNS_T_NS, 2)) {
           if (!response_rstart(control, DNS_T_NS, ttl))
@@ -348,7 +348,7 @@ ADDITIONAL:
       if (want(name.s, DNS_T_A)) {
         cdb_findstart(&c);
         while ((rc = find(name.s, 0))) {
-          if (rc == -1)
+          if (rc < 0)
             return 0;
           if (!memcmp(type, DNS_T_A, 2)) {
             if (!response_rstart(name.s, DNS_T_A, ttl))
@@ -362,7 +362,7 @@ ADDITIONAL:
       if (want(name.s, DNS_T_AAAA)) {
         cdb_findstart(&c);
         while ((rc = find(name.s, 0))) {
-          if (rc == -1)
+          if (rc < 0)
             return 0;
           if (!memcmp(type, DNS_T_AAAA, 2)) {
             if (!response_rstart(name.s, DNS_T_AAAA, ttl))

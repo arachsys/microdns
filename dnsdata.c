@@ -203,7 +203,7 @@ static int append(void) {
             err(1, "stralloc");
           if (!stralloc_catb(&key, bytes, len))
             err(1, "stralloc");
-          if (cdb_make_add(&cdb, key.s, key.len, loc, 2) == -1)
+          if (cdb_make_add(&cdb, key.s, key.len, loc, 2) < 0)
             err(1, "cdb");
           return 1;
         }
@@ -214,7 +214,7 @@ static int append(void) {
             err(1, "stralloc");
           if (!stralloc_catb(&key, bytes, len))
             err(1, "stralloc");
-          if (cdb_make_add(&cdb, key.s, key.len, loc, 2) == -1)
+          if (cdb_make_add(&cdb, key.s, key.len, loc, 2) < 0)
             err(1, "cdb");
           return 1;
         }
