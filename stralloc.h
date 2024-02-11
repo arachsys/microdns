@@ -26,7 +26,8 @@ static inline int stralloc_ready(stralloc *sa, size_t n) {
   if (sa->limit && sa->limit < n)
     return 0;
   if (sa->size && sa->size < n)
-    n += 30 + (n >> 3);
+    if (n < n + (n >> 3) + 30)
+      n += (n >> 3) + 30;
   if (sa->limit && sa->limit < n)
     n = sa->limit;
   if (sa->size < n) {
@@ -55,6 +56,8 @@ static inline int stralloc_copys(stralloc *sa, const char *s) {
 static inline int stralloc_catb(stralloc *sa, const void *s, size_t n) {
   if (!sa->s)
     return stralloc_copyb(sa, s, n);
+  if (sa->len + n < sa->len)
+    return 0;
   if (!stralloc_ready(sa, sa->len + n))
     return 0;
   if (n > 0)
