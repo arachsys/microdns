@@ -58,6 +58,13 @@ each type is usually ample. However, sockets are bound with SO_REUSEPORT
 or SO_REUSEPORT_LB to enable multiple instances to coexist on the same
 addresses if necessary, sharing load across processes and cores.
 
+In general these servers should be run on specific addresses rather than
+0.0.0.0 or :: wildcards. If udpdns binds to a wildcard and there is a
+choice of source addresses to reach a client, responses may not be sent
+from the same local address that received the query. Unfortunately there
+is no portable access to the local destination of a received datagram,
+so UDP servers must bind addresses individually to distinguish them.
+
 
 Building and installing
 -----------------------
