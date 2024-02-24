@@ -40,10 +40,10 @@ void attach(const char *address, const char *port) {
 
     setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEADDR,
       &(int) { 1 }, sizeof(int));
-#ifdef SO_REUSEPORT_LB
+#if defined(SO_REUSEPORT_LB)
     setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT_LB,
       &(int) { 1 }, sizeof(int));
-#else
+#elif defined(SO_REUSEPORT)
     setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT,
       &(int) { 1 }, sizeof(int));
 #endif
