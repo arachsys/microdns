@@ -117,7 +117,7 @@ static void new(size_t i) {
     return;
   }
 
-  for (j = 0, k = 1; k < streams; k++)
+  for (j = 0, k = 1; born[j] && k < streams; k++)
     if (born[k] < born[j])
       j = k;
   if (fd[j].fd >= 0)
