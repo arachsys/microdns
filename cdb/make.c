@@ -43,7 +43,7 @@ int cdb_make_add_end(struct cdb_make *c, size_t keylen, size_t datalen,
   struct cdb_hplist *head = c->head;
 
   if (!head || head->num >= CDB_HPLIST) {
-    head = malloc(sizeof(struct cdb_hplist));
+    head = malloc(sizeof *head);
     if (!head)
       return -1;
     head->num = 0;
@@ -94,10 +94,10 @@ int cdb_make_finish(struct cdb_make *c) {
   }
 
   memsize += c->entries; /* no overflow possible up to now */
-  if (memsize > 0xffffffff / sizeof(struct cdb_hp))
+  if (memsize > 0xffffffff / sizeof *c->split)
     return errno = ENOMEM, -1;
 
-  c->split = malloc(memsize * sizeof(struct cdb_hp));
+  c->split = malloc(memsize * sizeof *c->split);
   if (!c->split)
     return -1;
   c->hash = c->split + c->entries;
