@@ -17,7 +17,7 @@ Signed fields allow an optional + or - prefix.
 
 IPv4 addresses are given as dotted decimal quads, such as 192.0.2.1.
 IPv6 addresses can be abbreviated in the form 2001:db8::1, but for
-convenience this can also be written 2001.db8..1, where dots replace
+convenience this may also be written 2001.db8..1, where dots replace
 colons which would otherwise need \-escaping in :-separated fields.
 
 The field separator : can be changed to any other single byte using the
@@ -117,12 +117,12 @@ and individually in forward zones with deliberate empty non-terminals
 like ns.example.com above.
 
 
-RNAME and TTL defaults
-----------------------
+Configuration directives
+------------------------
 
 A configuration line of the form
 
-  !rname:ttl-ns:ttl-positive:ttl-negative
+  !rname:ttl-ns:ttl-positive:ttl-negative:serial
 
 changes the default values for subsequent records in the data file.
 
@@ -133,6 +133,13 @@ ttl-ns is the time (in seconds) for which NS records can be cached.
 ttl-positive is the time for which successful results can be cached.
 ttl-negative is the time for which negative responses can be cached.
 By default these are 259200, 86400 and 2560 seconds respectively.
+
+serial is the 32-bit serial number to embed in SOA records, overriding the
+default unix timestamp. As microdns does not implement legacy AXFR/IXFR,
+the effect is only cosmetic.
+
+If any of ttl-ns, ttl-positive, ttl-negative or serial are left empty,
+the previous value is preserved.
 
 
 Binary format
