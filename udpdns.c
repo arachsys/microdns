@@ -47,10 +47,6 @@ void attach(const char *address, const char *port) {
     setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT,
       &(int) { 1 }, sizeof(int));
 #endif
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_RCVBUF,
-      &(int) { 65536 }, sizeof(int));
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_SNDBUF,
-      &(int) { 65536 }, sizeof(int));
 
     if (bind(fd[fdc].fd, info->ai_addr, info->ai_addrlen) < 0)
       err(1, "bind");
