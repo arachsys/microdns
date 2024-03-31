@@ -23,7 +23,7 @@ void lookup(stralloc *r, size_t max, const void *ip, size_t iplen);
 
 void attach(const char *address, const char *port) {
   struct addrinfo hints = { .ai_socktype = SOCK_DGRAM }, *info, *list;
-  int status = getaddrinfo(address, port, &hints, &list);
+  int one = 1, status = getaddrinfo(address, port, &hints, &list);
 
   if (status != 0 || list == 0)
     errx(1, "getaddrinfo %s: %s", address, gai_strerror(status));
@@ -38,14 +38,25 @@ void attach(const char *address, const char *port) {
     if (fcntl(fd[fdc].fd, F_SETFL, O_NONBLOCK) < 0)
       err(1, "fcntl F_SETFL O_NONBLOCK");
 
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEADDR,
-      &(int) { 1 }, sizeof(int));
+    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
 #if defined SO_REUSEPORT_LB
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT_LB,
-      &(int) { 1 }, sizeof(int));
+    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT_LB, &one, sizeof one);
 #elif defined SO_REUSEPORT
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT,
-      &(int) { 1 }, sizeof(int));
+    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT, &one, sizeof one);
+#endif
+
+#if defined IP_FREEBIND && defined IPV6_FREEBIND
+    if (info->ai_family == AF_INET)
+      setsockopt(fd[fdc].fd, IPPROTO_IP, IP_FREEBIND, &one, sizeof one);
+    if (info->ai_family == AF_INET6)
+      setsockopt(fd[fdc].fd, IPPROTO_IPV6, IPV6_FREEBIND, &one, sizeof one);
+#elif defined IP_BINDANY && defined IPV6_BINDANY
+    if (info->ai_family == AF_INET)
+      setsockopt(fd[fdc].fd, IPPROTO_IP, IP_BINDANY, &one, sizeof one);
+    if (info->ai_family == AF_INET6)
+      setsockopt(fd[fdc].fd, IPPROTO_IPV6, IPV6_BINDANY, &one, sizeof one);
+#elif defined SO_BINDANY
+    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_BINDANY, &one, sizeof one);
 #endif
 
     if (bind(fd[fdc].fd, info->ai_addr, info->ai_addrlen) < 0)
