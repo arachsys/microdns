@@ -194,7 +194,7 @@ ANSWER:
         response_rcode(RCODE_REFUSED);
       return 1;
     }
-    control += *control + 1;
+    control += (uint8_t) *control + 1;
   }
 
   if (!authoritative) {
@@ -266,7 +266,7 @@ ANSWER:
       if (find(wild, 0))
         break; /* RFC 1034 section 4.3.3 */
     }
-    wild += *wild + 1;
+    wild += (uint8_t) *wild + 1;
   }
 
   if (found) {
