@@ -174,7 +174,7 @@ int dns_packet_getname(size_t *pos, stralloc *out,
       break;
   }
 
-  if (!dns_domain_copy(out, name))
+  if (!stralloc_copyb(out, name, namelen))
     return 0;
   if (first)
     *pos = first;
