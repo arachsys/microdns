@@ -139,7 +139,7 @@ int dns_packet_getname(size_t *pos, stralloc *out,
   uint8_t byte, state = 0;
   char name[255];
 
-  do {
+  while (1) {
     if (cursor >= size || ++loop >= 1000)
       return errno = EPROTO, 0;
     byte = in[cursor++];
@@ -169,7 +169,10 @@ int dns_packet_getname(size_t *pos, stralloc *out,
     if (byte >= 64 || namelen >= sizeof name)
       return errno = EPROTO, 0;
     state = name[namelen++] = byte;
-  } while (byte != 0);
+
+    if (byte == 0)
+      break;
+  }
 
   if (!dns_domain_copy(out, name))
     return 0;
