@@ -519,8 +519,8 @@ Options:\n\
 }
 
 int main(int argc, char **argv) {
-  int dummy = 0, force = 0;
-  char fs = ':', option;
+  int dummy = 0, force = 0, option;
+  char fs = ':';
   struct stat st;
 
   while ((option = getopt(argc, argv, ":d:fnt:")) > 0)

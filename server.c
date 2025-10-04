@@ -58,8 +58,8 @@ Options:\n\
 }
 
 int main(int argc, char **argv) {
-  int fd, foreground = 0;
-  char option, *user = 0;
+  int fd, foreground = 0, option;
+  char *user = 0;
 
   while ((option = getopt(argc, argv, ":d:fu:")) > 0)
     switch (option) {
