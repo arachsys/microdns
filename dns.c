@@ -62,7 +62,7 @@ int dns_domain_fromdot(stralloc *out, const char *in, size_t n) {
         byte = byte - '0';
         if (n > 0 && *in >= '0' && *in <= '7') {
           byte = (byte << 3) + *in++ - '0', n--;
-          if (n > 0 && *in >= '0' && *in <= '7')
+          if (n > 0 && *in >= '0' && *in <= '7' && byte < 32)
             byte = (byte << 3) + *in++ - '0', n--;
         }
       }

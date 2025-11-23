@@ -100,7 +100,7 @@ static void parse_text(stralloc *sa) {
         byte = byte - '0';
         if (i < sa->len && sa->s[i] >= '0' && sa->s[i] <= '7') {
           byte = (byte << 3) + sa->s[i++] - '0';
-          if (i < sa->len && sa->s[i] >= '0' && sa->s[i] <= '7')
+          if (i < sa->len && sa->s[i] >= '0' && sa->s[i] <= '7' && byte < 32)
             byte = (byte << 3) + sa->s[i++] - '0';
         }
       }
