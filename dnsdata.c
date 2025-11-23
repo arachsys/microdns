@@ -35,14 +35,14 @@ static size_t failc;
 static size_t linec;
 
 static int fail(const char *fmt, ...) {
- va_list args;
+  va_list args;
 
- fprintf(stderr, "%zu: ", linec);
- va_start(args, fmt);
- vfprintf(stderr, fmt, args);
- va_end(args);
- fputc('\n', stderr);
- return 0;
+  fprintf(stderr, "%zu: ", linec);
+  va_start(args, fmt);
+  vfprintf(stderr, fmt, args);
+  va_end(args);
+  fputc('\n', stderr);
+  return 0;
 }
 
 static int parse_loc(char loc[2], const stralloc *in) {

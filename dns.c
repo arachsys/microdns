@@ -45,7 +45,7 @@ int dns_domain_fromdot(stralloc *out, const char *in, size_t n) {
     if (byte == '.') {
       if (labellen) {
         if (namelen + labellen + 1 > sizeof name)
-          return  errno = EPROTO, 0;
+          return errno = EPROTO, 0;
         name[namelen++] = labellen;
         memcpy(name + namelen, label, labellen);
         namelen += labellen;
@@ -54,7 +54,7 @@ int dns_domain_fromdot(stralloc *out, const char *in, size_t n) {
       continue;
     }
 
-    if (byte  == '\\') {
+    if (byte == '\\') {
       if (n == 0)
         break;
       byte = *in++, n--;
