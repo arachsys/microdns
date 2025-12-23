@@ -536,7 +536,7 @@ int main(int argc, char **argv) {
         dummy = 1;
         break;
       case 't':
-       if (strlen(optarg) != 1 || memchr("\n\\", *optarg, 2))
+       if (strlen(optarg) != 1 || strchr("\n.\\01234567", *optarg))
           errx(1, "Invalid field separator");
         fs = *optarg;
         break;
