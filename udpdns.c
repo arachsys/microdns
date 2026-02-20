@@ -1,11 +1,10 @@
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
-#include <stddef.h>
+#include <stdio.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "stralloc.h"
 
@@ -19,54 +18,51 @@ static stralloc r = {
   .limit = -1
 };
 
+size_t attach(struct pollfd *fd, size_t fdlen, int type,
+    const char *address, const char *port);
 void lookup(stralloc *r, size_t max, const void *ip, size_t iplen);
+void prepare(int fg, const char *user);
 
-void attach(const char *address, const char *port) {
-  struct addrinfo hints = { .ai_socktype = SOCK_DGRAM }, *info, *list;
-  int one = 1, status = getaddrinfo(address, port, &hints, &list);
-
-  if (status != 0 || list == 0)
-    errx(1, "getaddrinfo %s: %s", address, gai_strerror(status));
-
-  for (info = list; info; info = info->ai_next, fdc++) {
-    if (fdc >= sizeof fd / sizeof *fd)
-      errx(1, "Too many listening addresses");
-
-    fd[fdc].fd = socket(info->ai_family, info->ai_socktype, 0);
-    if (fd[fdc].fd < 0)
-      err(1, "socket");
-    if (fcntl(fd[fdc].fd, F_SETFL, O_NONBLOCK) < 0)
-      err(1, "fcntl F_SETFL O_NONBLOCK");
-
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
-#if defined SO_REUSEPORT_LB
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT_LB, &one, sizeof one);
-#elif defined SO_REUSEPORT
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_REUSEPORT, &one, sizeof one);
-#endif
-
-#if defined IP_FREEBIND && defined IPV6_FREEBIND
-    if (info->ai_family == AF_INET)
-      setsockopt(fd[fdc].fd, IPPROTO_IP, IP_FREEBIND, &one, sizeof one);
-    if (info->ai_family == AF_INET6)
-      setsockopt(fd[fdc].fd, IPPROTO_IPV6, IPV6_FREEBIND, &one, sizeof one);
-#elif defined IP_BINDANY && defined IPV6_BINDANY
-    if (info->ai_family == AF_INET)
-      setsockopt(fd[fdc].fd, IPPROTO_IP, IP_BINDANY, &one, sizeof one);
-    if (info->ai_family == AF_INET6)
-      setsockopt(fd[fdc].fd, IPPROTO_IPV6, IPV6_BINDANY, &one, sizeof one);
-#elif defined SO_BINDANY
-    setsockopt(fd[fdc].fd, SOL_SOCKET, SO_BINDANY, &one, sizeof one);
-#endif
-
-    if (bind(fd[fdc].fd, info->ai_addr, info->ai_addrlen) < 0)
-      err(1, "bind");
-    fd[fdc].events = POLLIN;
-  }
-  freeaddrinfo(list);
+static int usage(const char *progname) {
+  fprintf(stderr, "\
+Usage: %s [OPTIONS] ADDRESS...\n\
+Options:\n\
+  -d DIR        change directory to DIR before opening data.cdb\n\
+  -f            run in the foreground instead of daemonizing\n\
+  -u UID:GID    run with the specified numeric uid and gid\n\
+  -u USERNAME   run with the uid and gid of user USERNAME\n\
+", progname);
+  return 64;
 }
 
-void serve() {
+int main(int argc, char **argv) {
+  int fg = 0, option;
+  char *user = 0;
+
+  while ((option = getopt(argc, argv, ":d:fu:")) > 0)
+    switch (option) {
+      case 'd':
+        if (chdir(optarg) < 0)
+          err(1, "chdir");
+        break;
+      case 'f':
+        fg = 1;
+        break;
+      case 'u':
+        user = optarg;
+        break;
+      default:
+        return usage(argv[0]);
+    }
+
+  if (argc <= optind)
+    return usage(argv[0]);
+  for (int i = optind; i < argc; i++)
+    fdc = fdc + attach(fd + fdc, sizeof fd / sizeof *fd - fdc,
+      SOCK_DGRAM, argv[i], "53");
+
+  prepare(fg, user);
+
   while (1) {
     if (poll(fd, fdc, -1) < 0) {
       if (errno == EINTR)
