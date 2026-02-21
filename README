@@ -66,6 +66,19 @@ is no portable access to the local destination of a received datagram,
 so UDP servers must bind addresses individually to distinguish them.
 
 
+tlsdns
+------
+
+The optional tlsdns server provides authoritative DNS over TLS on TCP port
+853, multiplexing a pool of up to 256 streams in the same style as tcpdns.
+It depends on LibreSSL libtls so isn't built by default, but can be added
+to BINARIES or explicitly compiled with 'make tlsdns'.
+
+Supporting the same flags as tcpdns, tlsdns expects the path to a combined
+certificate and key file in PEM format as its first positional argument,
+followed by one or more IPv4 and/or IPv6 addresses on which to listen.
+
+
 Building and installing
 -----------------------
 

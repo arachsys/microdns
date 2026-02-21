@@ -11,11 +11,10 @@ all: $(BINARIES)
 
 dnsdata: cdb/cdb.h cdb/make.[ch] dns.[ch] pack.h scan.[ch] stralloc.h
 
-tcpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] scan.[ch] \
-  server.c stralloc.h
+tcpdns tlsdns udpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] \
+  scan.[ch] server.c stralloc.h
 
-udpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] scan.[ch] \
-  server.c stralloc.h
+tlsdns: LDFLAGS += -ltls
 
 install: $(BINARIES)
 	mkdir -p $(DESTDIR)$(BINDIR)
