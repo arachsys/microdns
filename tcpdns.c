@@ -64,8 +64,8 @@ static uint64_t utime(void) {
 static void drop(size_t i) {
   if (fd[i].fd >= 0)
     close(fd[i].fd);
-  fd[i].fd = -1;
   fd[i].events = 0;
+  fd[i].fd = -1;
   born[i] = 0;
   head[i] = 0;
   tail[i] = 0;
@@ -87,15 +87,12 @@ static void new(size_t i) {
   for (j = 0, k = 1; born[j] && k < streams; k++)
     if (born[k] < born[j])
       j = k;
-  if (fd[j].fd >= 0)
-    close(fd[j].fd);
+  drop(j);
 
-  fd[j].fd = client;
   fd[j].events = POLLIN;
-  peer[j] = sa;
+  fd[j].fd = client;
   born[j] = utime();
-  head[j] = 0;
-  tail[j] = 0;
+  peer[j] = sa;
 }
 
 static int stream(size_t i) {
@@ -103,56 +100,42 @@ static int stream(size_t i) {
   ssize_t count;
 
   if (head[i] < 2) {
-    count = read(fd[i].fd, buffer[i], 2 - head[i]);
-    if (count < 0)
-      if (errno == EINTR || errno == EAGAIN)
-        return 1;
+    count = read(fd[i].fd, buffer[i] + head[i], 2 - head[i]);
+    if (count < 0 && (errno == EINTR || errno == EAGAIN))
+      return POLLIN;
     if (count <= 0)
       return 0;
-    head[i] += count;
+    if (head[i] += count, head[i] < 2)
+      return POLLIN;
   }
 
-  if (head[i] >= 2) {
-    size = unpack_uint16_big(buffer[i]);
-    if (size == 0)
+  if (!(size = unpack_uint16_big(buffer[i])))
+    return 0;
+
+  if (head[i] < size + 2) {
+    count = read(fd[i].fd, buffer[i] + head[i], size + 2 - head[i]);
+    if (count < 0 && (errno == EINTR || errno == EAGAIN))
+      return POLLIN;
+    if (count <= 0)
       return 0;
-
-    if (head[i] < size + 2) {
-      count = read(fd[i].fd, buffer[i] + head[i], size + 2 - head[i]);
-      if (count < 0)
-        if (errno == EINTR || errno == EAGAIN)
-          return 1;
-      if (count <= 0)
-        return 0;
-      head[i] += count;
-
-      if (head[i] == size + 2) {
-        size = respond(i);
-        if (size == 0)
-          return 0;
-        fd[i].events = POLLOUT;
-      }
-    }
-
-    if (head[i] == size + 2) {
-      count = write(fd[i].fd, buffer[i] + tail[i], head[i] - tail[i]);
-      if (count < 0)
-        if (errno == EINTR || errno == EAGAIN)
-          return 1;
-      if (count <= 0)
-        return 0;
-      tail[i] += count;
-
-      if (head[i] <= tail[i]) {
-        fd[i].events = POLLIN;
-        born[i] = utime();
-        head[i] = 0;
-        tail[i] = 0;
-      }
-    }
+    if (head[i] += count, head[i] < size + 2)
+      return POLLIN;
+    if (respond(i) == 0)
+      return 0;
   }
 
-  return 1;
+  count = write(fd[i].fd, buffer[i] + tail[i], head[i] - tail[i]);
+  if (count < 0 && (errno == EINTR || errno == EAGAIN))
+    return POLLOUT;
+  if (count <= 0)
+    return 0;
+  if (tail[i] += count, tail[i] < head[i])
+    return POLLOUT;
+
+  born[i] = utime();
+  head[i] = 0;
+  tail[i] = 0;
+  return POLLIN;
 }
 
 static int usage(const char *progname) {
@@ -208,7 +191,7 @@ int main(int argc, char **argv) {
     }
 
     for (size_t i = 0; i < streams; i++)
-      if (fd[i].revents && !stream(i))
+      if (fd[i].revents && !(fd[i].events = stream(i)))
         drop(i);
 
     for (size_t i = streams; i < fdc; i++)
