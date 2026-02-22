@@ -189,6 +189,8 @@ int dns_packet_skipname(size_t *pos, const char *in, size_t size) {
   while (cursor < size) {
     uint8_t byte = in[cursor++];
     if (byte >= 192) {
+      if (cursor >= size)
+        return errno = EPROTO, 0;
       *pos = cursor + 1;
       return 1;
     }
