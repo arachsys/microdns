@@ -44,6 +44,7 @@ static int dowild(stralloc *name, const char *replace, size_t len) {
       return 0;
     memmove(name->s + len, name->s + 2, name->len - 2);
     memcpy(name->s, replace, len);
+    name->len += len - 2;
   }
   return response_addname(name->s);
 }
