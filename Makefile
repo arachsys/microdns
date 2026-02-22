@@ -4,8 +4,12 @@ BINARIES := dnsdata tcpdns udpdns
 CFLAGS := -ffunction-sections -O2 -Wall -Wno-unused-label
 LDFLAGS := -Wl,--gc-sections
 
+ifdef TLS
+BINARIES += tlsdns
+endif
+
 %:: %.c Makefile
-	$(CC) $(CFLAGS) $(LDFLAGS) -I . -o $@ $(filter %.c,$^)
+	$(CC) $(CFLAGS) $(LDFLAGS) -I . -o $@ $(filter %.c,$^) $(LDLIBS)
 
 all: $(BINARIES)
 
@@ -14,7 +18,7 @@ dnsdata: cdb/cdb.h cdb/make.[ch] dns.[ch] pack.h scan.[ch] stralloc.h
 tcpdns tlsdns udpdns: cdb/cdb.[ch] dns.[ch] lookup.c pack.h response.[ch] \
   scan.[ch] server.c stralloc.h
 
-tlsdns: LDFLAGS += -ltls
+tlsdns: LDLIBS += -ltls
 
 install: $(BINARIES)
 	mkdir -p $(DESTDIR)$(BINDIR)

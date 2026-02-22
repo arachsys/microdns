@@ -71,8 +71,8 @@ tlsdns
 
 The optional tlsdns server provides authoritative DNS over TLS on TCP port
 853, multiplexing a pool of up to 256 streams in the same style as tcpdns.
-It depends on LibreSSL libtls so isn't built by default, but can be added
-to BINARIES or explicitly compiled with 'make tlsdns'.
+It depends on LibreSSL libtls so isn't built by default; include TLS=1
+in the arguments to 'make' to build or install it.
 
 Supporting the same flags as tcpdns, tlsdns expects the path to a combined
 certificate and key file in PEM format as its first positional argument,
