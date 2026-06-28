@@ -1,5 +1,6 @@
 #include <err.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <netdb.h>
 #include <poll.h>
 #include <pwd.h>
